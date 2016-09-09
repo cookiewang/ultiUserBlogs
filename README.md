@@ -1,8 +1,11 @@
-# ultiUserBlogs
+## How to use ultiUserBlogs
 go to public website below to see the blogs
 https://guangxingfirstproject.appspot.com/blog
-# Steps of processing
 # Step One
 login if you're an existing user or sign up as an new user
 # Step Two
-After login, you can create a new blog at 
+After login, you can create a new blog at https://guangxingfirstproject.appspot.com/blog/newpost
+# Step Three
+You can edit or delete your blogs, and also can like others' blog (but only once), otherwise you should get an error message.
+## To see the source code
+Download or clone this repository

@@ -1,0 +1,21 @@
+
+<form method="post">
+<div class="post">
+  <div class="post-heading">
+    <div class="post-title">
+      {{p.subject}}
+    </div>
+
+    <div class="post-date">
+      {{p.created.strftime("%b %d, %Y")}}
+    </div>
+  </div>
+
+  <div class="post-content">
+    {{p._render_text | safe}}
+  </div>
+
+
+</div>
+<ul class='post-social' > <li> <a href="/blog/edit/{{p.key().id()}}">Edit</a></li><li> <a href="/blog/delete/{{p.key().id()}}">Delete</a></li><li> <a href="/blog/like/{{p.key().id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
+</form>

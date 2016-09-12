@@ -185,6 +185,10 @@ class NewPost(BlogHandler):
 class EditPost(BlogHandler):
 
     def get(self, post_id):
+        if not self.user:
+            self.redirect("/login")
+            return 
+
         key = db.Key.from_path('Post', int(post_id), parent=blog_key())
         if key:
             post = db.get(key)
@@ -199,6 +203,7 @@ class EditPost(BlogHandler):
     def post(self, post_id):
         if not self.user:
             self.redirect('/blog')
+            return
 
         subject = self.request.get('subject')
         content = self.request.get('content')
@@ -220,6 +225,10 @@ class EditPost(BlogHandler):
 class DeletePost(BlogHandler):
 
     def get(self, post_id):
+        if not self.user:
+            self.redirect("/login")
+            return
+
         key = db.Key.from_path('Post', int(post_id), parent=blog_key())
         if key:
             post = db.get(key)
@@ -237,6 +246,9 @@ class DeletePost(BlogHandler):
 class LikePost(BlogHandler):
 
     def get(self, post_id):
+        if not self.user:
+            self.redirect("/login")
+            return
         key = db.Key.from_path('Post', int(post_id), parent=blog_key())
         post = db.get(key)
         if post and post.author != self.user.name and not Post.isExisted(post, self.user.name):

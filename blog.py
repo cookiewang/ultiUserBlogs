@@ -150,15 +150,59 @@ class BlogFront(BlogHandler):
              self.redirect("/login")
 
 class PostPage(BlogHandler):
-    def get(self, post_id):
+    def get(self, post_id, action='default'):
+
+        if not self.user:
+            self.redirect("/login")
+            return 
+
         key = db.Key.from_path('Post', int(post_id), parent=blog_key())
         post = db.get(key)
 
         if not post:
             self.error(404)
             return
+        if action == 'default':
+            self.render("permalink.html", post = post)
+        elif action == 'Edit':
+            if post.author == self.user.name:
+                subject = post.subject
+                content = post.content
+                self.render("newpost.html", title='%s Post' % action, subject=subject, content=content, error="")
+            else:
+                error = "You're not allowed to edit others' blog."
+                self.render("error.html", error=error)
+                
+        elif action == 'Delete':
+            if post.author == self.user.name:
+                db.delete(key)
+                message = "One blog was deleted successfully."
+                self.render("result.html", message=message)
+            else:
+                error = "You're not allowed to delete others' blog."
+                self.render("error.html", error=error)
+    
+    def post(self, post_id, action='default'):
+        if not self.user:
+            self.redirect('/blog')
+            return
 
-        self.render("permalink.html", post = post)
+        subject = self.request.get('subject')
+        content = self.request.get('content')
+
+        if subject and content:
+            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
+            post = db.get(key)
+            post.subject = subject
+            post.content = content
+            post.put()
+            message = "One blog was editted successfully."
+            self.render("result.html", message=message)
+        else:
+            error = "subject and content, please!"
+            self.render("newpost.html", title='Edit Post', subject=subject, content=content, error=error)
+
+     
 
 class NewPost(BlogHandler):
     def get(self):
@@ -181,66 +225,6 @@ class NewPost(BlogHandler):
         else:
             error = "subject and content, please!"
             self.render("newpost.html", title='New Post', subject=subject, content=content, like_num = 0, error=error)
-
-class EditPost(BlogHandler):
-
-    def get(self, post_id):
-        if not self.user:
-            self.redirect("/login")
-            return 
-
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        if key:
-            post = db.get(key)
-            if post and post.author == self.user.name:
-                subject = post.subject
-                content = post.content
-                self.render("newpost.html", title='Edit Post', subject=subject, content=content, error="")
-            else:
-                error = "You're not allowed to edit others' blog."
-                self.render("error.html", error=error)
-
-    def post(self, post_id):
-        if not self.user:
-            self.redirect('/blog')
-            return
-
-        subject = self.request.get('subject')
-        content = self.request.get('content')
-
-        if subject and content:
-            ## p = Post(parent = int(post_id), subject = subject, content = content)
-            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            post = db.get(key)
-            post.subject = subject
-            post.content = content
-            post.put()
-            ##self.redirect('/blog/%s' % str(post.key().id()))
-            message = "One blog was editted successfully."
-            self.render("result.html", message=message)
-        else:
-            error = "subject and content, please!"
-            self.render("newpost.html", subject=subject, content=content, error=error)
-
-class DeletePost(BlogHandler):
-
-    def get(self, post_id):
-        if not self.user:
-            self.redirect("/login")
-            return
-
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        if key:
-            post = db.get(key)
-            if post and post.author == self.user.name:
-                db.delete(key)
-               ## posts = greetings = Post.all().order('-created')
-               ## self.render('front.html', posts = posts
-                message = "One blog was deleted successfully."
-                self.render("result.html", message=message)
-            else:
-                error = "You're not allowed to delete others' blog."
-                self.render("error.html", error=error)
 
 
 class LikePost(BlogHandler):
@@ -400,14 +384,13 @@ app = webapp2.WSGIApplication([('/', MainPage),
                                ('/unit2/signup', Unit2Signup),
                                ('/unit2/welcome', Welcome),
                                ('/blog/?', BlogFront),
-                               ('/blog/([0-9]+)', PostPage),
                                ('/blog/newpost', NewPost),
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/unit3/welcome', Unit3Welcome),
-                               ('/blog/edit/([0-9]+)',EditPost),
-                               ('/blog/delete/([0-9]+)',DeletePost),
                                ('/blog/like/([0-9]+)',LikePost),
+                               ('/blog/([0-9]+)',PostPage),
+                               webapp2.Route('/blog/<post_id:\d+>/<action:(Edit|Delete)>', handler=PostPage),
                                ],
                               debug=True)

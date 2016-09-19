@@ -6,6 +6,7 @@ import hmac
 from string import letters
 import webapp2
 import jinja2
+import model
 
 from google.appengine.ext import db
 
@@ -117,152 +118,98 @@ class User(db.Model):
 
 ##### blog stuff
 
-def blog_key(name = 'default'):
-    return db.Key.from_path('blogs', name)
-
-class Post(db.Model):
-    author = db.TextProperty()
-    user_names = db.ListProperty(db.Text)
-    subject = db.StringProperty(required = True)
-    content = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True)
-    like_num = db.IntegerProperty()
-
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
-        return render_str("post.html", p = self)
-
-    def isExisted(self, name):
-        if name in self.user_names:
-            return True
-        else:
-            self.user_names.append(db.Text(name))
-            return False
-
-
-class BlogFront(BlogHandler):
-    def get(self):
-         if self.user:
-             posts = greetings = Post.all().order('-created')
-             self.render('front.html', posts = posts)
-         else:
-             self.redirect("/login")
-
-class PostPage(BlogHandler):
-    def get(self, post_id, action='default'):
-
-        if not self.user:
-            self.redirect("/login")
-            return 
-
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        post = db.get(key)
-
-        if not post:
-            self.error(404)
-            return
-        if action == 'default':
-            self.render("permalink.html", post = post)
-        elif action == 'Edit':
-            if post.author == self.user.name:
-                subject = post.subject
-                content = post.content
-                self.render("newpost.html", title='%s Post' % action, subject=subject, content=content, error="")
-            else:
-                error = "You're not allowed to edit others' blog."
-                self.render("error.html", error=error)
-                
-        elif action == 'Delete':
-            if post.author == self.user.name:
-                db.delete(key)
-                message = "One blog was deleted successfully."
-                self.render("result.html", message=message)
-            else:
-                error = "You're not allowed to delete others' blog."
-                self.render("error.html", error=error)
-    
-    def post(self, post_id, action='default'):
-        if not self.user:
-            self.redirect('/blog')
-            return
-
-        subject = self.request.get('subject')
-        content = self.request.get('content')
-
-        if subject and content:
-            key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-            post = db.get(key)
-            post.subject = subject
-            post.content = content
-            post.put()
-            message = "One blog was editted successfully."
-            self.render("result.html", message=message)
-        else:
-            error = "subject and content, please!"
-            self.render("newpost.html", title='Edit Post', subject=subject, content=content, error=error)
-
-     
-
-class NewPost(BlogHandler):
-    def get(self):
-        if self.user:
-            self.render("newpost.html", title='New Post')
-        else:
-            self.redirect("/login")
-
-    def post(self):
-        if not self.user:
-            self.redirect('/blog')
-
-        subject = self.request.get('subject')
-        content = self.request.get('content')
-
-        if subject and content:
-            p = Post(parent = blog_key(),author = self.user.name, subject = subject, content = content, like_num = 0)
-            p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
-        else:
-            error = "subject and content, please!"
-            self.render("newpost.html", title='New Post', subject=subject, content=content, like_num = 0, error=error)
-
-
 class LikePost(BlogHandler):
 
     def get(self, post_id):
         if not self.user:
             self.redirect("/login")
             return
-        key = db.Key.from_path('Post', int(post_id), parent=blog_key())
-        post = db.get(key)
-        if post and post.author != self.user.name and not Post.isExisted(post, self.user.name):
-            post.like_num = post.like_num + 1
-            post.put()
-            ## posts = greetings = Post.all().order('-created')
-            ##self.render('front.html', posts = posts)
+
+        post = model.GetCommentById(post_id)
+        if post and post.author != self.user.name and not model.isExisted(post, self.user.name):
+            model.AddLike(post_id)
             message = "One like was added successfully."
             self.render("result.html", message=message)
         else:
-            if Post.isExisted(post, self.user.name):
+            if model.isExisted(post, self.user.name):
                 error = "You're only allowed to like others' blog once."
             else:               
                 error = "You're only allowed to like others' blog."
             self.render("error.html", error=error)
-     
 
 
+class QueryHandler(BlogHandler):
 
-class Error(BlogHandler):
     def get(self):
-        self.render('error.html')
+        comments = model.Comment.query_comments()
+        self.render('front.html', posts = comments)
 
-    def post(self):
-        posts = greetings = Post.all().order('-created')
-        self.render('front.html', posts = posts)
+class PostHandler(BlogHandler):
+    
+    def get(self, post_id='0', action='default'):
+        if not self.user:
+            self.redirect("/login")
+            return
+
+        if action == 'default' and post_id != '0':
+            comment = model.GetCommentById(post_id)
+            if not comment:
+                self.error(404)
+                return
+            self.render("permalink.html", post = comment)
+            return
+
+        if action == 'default':
+            self.render("newpost.html", title='New Post')
+        elif action == 'Edit':
+            comment = model.GetCommentById(post_id)
+            if comment.author == self.user.name:
+                subject = comment.subject
+                content = comment.content
+                self.render("newpost.html", title='Edit Post', subject=subject, content=content, error="")
+            else:
+                error = "You're not allowed to edit others' blog."
+                self.render("error.html", error=error)
+
+        elif action == 'Delete':
+            comment = model.GetCommentById(post_id)
+            if comment.author == self.user.name:
+                self.render("deleteConfirm.html", title='Delete Post', id=post_id)
+            else:
+                error = "You're not allowed to delete others' blog."
+                self.render("error.html", error=error)
+
+    def post(self, post_id='0', action='default'):
+        if not self.user:
+            self.redirect('/blog')
+        if action == 'default' or action == 'Edit':
+            subject = self.request.get('subject')
+            content = self.request.get('content')
+            title = "New Post"
+            if action == 'Edit':
+                title = 'Edit Post'
+            if subject and content:
+                if action == 'default':
+                    comment = model.InsertComment(self.user.name, subject, content)
+                    message = "A new post with Id %d was created successfully. " % comment.key.integer_id()
+                else:
+                    comment = model.UpdateComment(post_id, subject, content)
+                    message = "A post with Id %d was edited successfully. " % comment.key.integer_id()
+
+                self.render("result.html", message=message)
+            else:
+                error = "subject and content, please!"
+                self.render("newpost.html", title=title, subject=subject, content=content, error=error)
+
+
+        elif action == 'Delete':
+            model.DeleteComment(post_id)
+            message = "One blog was deleted successfully."
+            self.render("result.html", message=message)
 
 
 
-###### Unit 2 HW's
+###### Unit 2 Hr's
 class Rot13(BlogHandler):
     def get(self):
         self.render('rot13-form.html')
@@ -383,14 +330,14 @@ app = webapp2.WSGIApplication([('/', MainPage),
                                ('/unit2/rot13', Rot13),
                                ('/unit2/signup', Unit2Signup),
                                ('/unit2/welcome', Welcome),
-                               ('/blog/?', BlogFront),
-                               ('/blog/newpost', NewPost),
+                               ('/blog/?', QueryHandler),
+                               ('/blog/newpost', PostHandler),
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/unit3/welcome', Unit3Welcome),
                                ('/blog/like/([0-9]+)',LikePost),
-                               ('/blog/([0-9]+)',PostPage),
-                               webapp2.Route('/blog/<post_id:\d+>/<action:(Edit|Delete)>', handler=PostPage),
+                               ('/blog/([0-9]+)',PostHandler),
+                               webapp2.Route('/blog/<post_id:\d+>/<action:(Edit|Delete)>', handler=PostHandler),
                                ],
                               debug=True)

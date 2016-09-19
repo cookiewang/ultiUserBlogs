@@ -17,5 +17,5 @@
 
 
 </div>
-<ul class='post-social' > <li> <a href="/blog/{{p.key().id()}}/Edit">Edit</a></li><li> <a href="/blog/{{p.key().id()}}/Delete">Delete</a></li><li> <a href="/blog/like/{{p.key().id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
+<ul class='post-social' > <li> <a href="/blog/{{p.key.integer_id()}}/Edit">Edit</a></li><li> <a href="/blog/{{p.key.integer_id()}}/Delete">Delete</a></li><li> <a href="/blog/like/{{p.key.integer_id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
 </form>

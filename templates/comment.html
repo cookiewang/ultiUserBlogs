@@ -1,0 +1,11 @@
+
+<form method="post">
+<div class="post">
+
+  <div class="comment">
+    {{c._render_text | safe}}
+<ul class='post-social'><li>---- Commented By {{c.author}}</li><li> <a href="/blog/comment-edit/{{c.key.integer_id()}}">Edit</a></li><li> <a href="/blog/comment-delete/{{postId}}/{{c.key.integer_id()}}">Delete</a></li></ul>
+  </div>
+</div>
+</form>
+

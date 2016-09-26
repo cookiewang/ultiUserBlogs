@@ -125,7 +125,7 @@ class LikePost(BlogHandler):
             self.redirect("/login")
             return
 
-        post = model.GetCommentById(post_id)
+        post = model.GetPostById(post_id)
         if post and post.author != self.user.name and not model.isExisted(post, self.user.name):
             model.AddLike(post_id)
             message = "One like was added successfully."
@@ -141,60 +141,64 @@ class LikePost(BlogHandler):
 class QueryHandler(BlogHandler):
 
     def get(self):
-        comments = model.Comment.query_comments()
-        self.render('front.html', posts = comments)
+        posts = model.Post.query_posts()
+        self.render('front.html', posts = posts)
 
 class PostHandler(BlogHandler):
     
-    def get(self, post_id='0', action='default'):
+    def get(self, post_id='0', action='new_post'):
         if not self.user:
             self.redirect("/login")
             return
 
-        if action == 'default' and post_id != '0':
-            comment = model.GetCommentById(post_id)
-            if not comment:
+        if action == 'new_post' and post_id != '0':
+            post = model.GetPostById(post_id)
+            if not post:
                 self.error(404)
                 return
-            self.render("permalink.html", post = comment)
+             
+            self.render("permalink.html", post = post)
             return
 
-        if action == 'default':
+        if action == 'new_post':
             self.render("newpost.html", title='New Post')
         elif action == 'Edit':
-            comment = model.GetCommentById(post_id)
-            if comment.author == self.user.name:
-                subject = comment.subject
-                content = comment.content
+            post = model.GetPostById(post_id)
+            if post.author == self.user.name:
+                subject = post.subject
+                content = post.content
                 self.render("newpost.html", title='Edit Post', subject=subject, content=content, error="")
             else:
+                self.error(404)
                 error = "You're not allowed to edit others' blog."
                 self.render("error.html", error=error)
-
+                return
         elif action == 'Delete':
-            comment = model.GetCommentById(post_id)
-            if comment.author == self.user.name:
+            post = model.GetPostById(post_id)
+            if post.author == self.user.name:
                 self.render("deleteConfirm.html", title='Delete Post', id=post_id)
             else:
+                self.error(404)
                 error = "You're not allowed to delete others' blog."
                 self.render("error.html", error=error)
 
-    def post(self, post_id='0', action='default'):
+    def post(self, post_id='0', action='new_post'):
         if not self.user:
             self.redirect('/blog')
-        if action == 'default' or action == 'Edit':
+            return
+        if action == 'new_post' or action == 'Edit':
             subject = self.request.get('subject')
             content = self.request.get('content')
             title = "New Post"
             if action == 'Edit':
                 title = 'Edit Post'
             if subject and content:
-                if action == 'default':
-                    comment = model.InsertComment(self.user.name, subject, content)
-                    message = "A new post with Id %d was created successfully. " % comment.key.integer_id()
+                if action == 'new_post':
+                    post = model.InsertPost(self.user.name, subject, content)
+                    message = "A new post with Id %d was created successfully. " % post.key.integer_id()
                 else:
-                    comment = model.UpdateComment(post_id, subject, content)
-                    message = "A post with Id %d was edited successfully. " % comment.key.integer_id()
+                    post = model.UpdatePost(post_id, subject, content)
+                    message = "A post with Id %d was edited successfully. " % post.key.integer_id()
 
                 self.render("result.html", message=message)
             else:
@@ -203,13 +207,71 @@ class PostHandler(BlogHandler):
 
 
         elif action == 'Delete':
-            model.DeleteComment(post_id)
+            model.DeletePost(post_id)
             message = "One blog was deleted successfully."
             self.render("result.html", message=message)
 
+class CreateNewComment(BlogHandler):
+     def get(self, post_id):
+         post = model.GetPostById(post_id)
+         if post.author == self.user.name:
+             error = "You're not allowed to write a comment for your blog."
+             self.render("error.html", error=error)
+         else:
+             self.render("newcomment.html", title='New Comment')
+         return
 
+     def post(self, post_id):
+         content = self.request.get('content')
+         comment = model.InsertComment(self.user.name, content)
+         model.addCommentToPost(post_id, comment.key.integer_id())
+         message = "A new comment with Id %d was created successfully. " % comment.key.integer_id()
+         self.render("result.html", message=message)
+
+class UpdateComment(BlogHandler):
+     def get(self, comment_id='0'):
+         comment = model.GetCommentById(comment_id)
+         if comment.author == self.user.name:
+             content = comment.content
+             self.render("newcomment.html", title='Edit Comment', content=content, error="")
+         else:
+             error = "You're not allowed to edit others' comment."
+             self.render("error.html", error=error)
+
+         return
+
+     def post(self, comment_id):
+         content = self.request.get('content')
+         if content:
+             comment = model.UpdateComment(comment_id, content)
+             message = "A comment with Id %d was edited successfully. " % comment.key.integer_id()
+             self.render("result.html", message=message)
+         else:
+             error = "Content, please!"
+             self.render("newcomment.html", title='Edit Comment', content=content, error=error)
+         
+         return
+
+class DeleteComment(BlogHandler):
+     def get(self, post_id, comment_id):
+         comment = model.GetCommentById(comment_id)
+         if comment.author == self.user.name:
+             self.render("deleteCommentConfirm.html", title='Delete Comment', id=comment_id)
+         else:
+             error = "You're not allowed to delete others' comment."
+             self.render("error.html", error=error)
+ 
+         return            
+
+     def post(self, post_id, comment_id):
+         comment = model.DeleteComment(comment_id)
+         model.RemoveCommentToPost(post_id, comment_id)
+         message = "A comment with Id %s was deleted successfully. " % comment_id
+         self.render("result.html", message=message)
+         return
 
 ###### Unit 2 Hr's
+
 class Rot13(BlogHandler):
     def get(self):
         self.render('rot13-form.html')
@@ -338,6 +400,9 @@ app = webapp2.WSGIApplication([('/', MainPage),
                                ('/unit3/welcome', Unit3Welcome),
                                ('/blog/like/([0-9]+)',LikePost),
                                ('/blog/([0-9]+)',PostHandler),
+                               ('/blog/new-comment/([0-9]+)',CreateNewComment),
+                               ('/blog/comment-edit/([0-9]+)',UpdateComment),
+                               ('/blog/comment-delete/([0-9]+)/([0-9]+)', DeleteComment),
                                webapp2.Route('/blog/<post_id:\d+>/<action:(Edit|Delete)>', handler=PostHandler),
                                ],
                               debug=True)

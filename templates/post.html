@@ -19,3 +19,11 @@
 </div>
 <ul class='post-social' > <li> <a href="/blog/{{p.key.integer_id()}}/Edit">Edit</a></li><li> <a href="/blog/{{p.key.integer_id()}}/Delete">Delete</a></li><li> <a href="/blog/like/{{p.key.integer_id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
 </form>
+<div>
+   <a href="/blog/new-comment/{{p.key.integer_id()}}">Create A New Comment</a></li></ul>
+</div>
+  <div class="post-content">
+  {% for c in p.comment_ids %}
+    {{p.getCommentById(c, p.key.integer_id()) | safe }}
+  {% endfor %}
+  </div>

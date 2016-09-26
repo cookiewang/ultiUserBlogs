@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2>{{title}}</h2>
+
+    <form method="post">
+      <div class="error">Do you want to delete the comment with Id : {{id}} ? Click Submit for Yes, Click Cancel for No</div>
+      <ul class='post-social'><li><input type="submit"></li> <li> <a href="/blog">Cancel</a></li></ul>
+    </form>
+{% endblock %}

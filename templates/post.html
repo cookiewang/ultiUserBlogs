@@ -17,7 +17,7 @@
 
 
 </div>
-<ul class='post-social' > <li> <a href="/blog/{{p.key.integer_id()}}/Edit">Edit</a></li><li> <a href="/blog/{{p.key.integer_id()}}/Delete">Delete</a></li><li> <a href="/blog/like/{{p.key.integer_id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
+<ul class='post-social' > <li> <a href="/blog/EditPost/{{p.key.integer_id()}}">Edit</a></li><li> <a href="/blog/DeletePost/{{p.key.integer_id()}}">Delete</a></li><li> <a href="/blog/like/{{p.key.integer_id()}}">Like</a></li><li>{{p.like_num}}</li> </ul>
 </form>
 <div>
    <a href="/blog/new-comment/{{p.key.integer_id()}}">Create A New Comment</a></li></ul>

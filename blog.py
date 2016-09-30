@@ -136,7 +136,7 @@ class LikePost(BlogHandler):
                 error = "You're only allowed to like others' blog."
             self.render("error.html", error=error)
 
-# This class retrieve all the posts
+# This class is to retrieve all the posts
 class QueryHandler(BlogHandler):
    
      def get(self):
@@ -148,7 +148,7 @@ class QueryHandler(BlogHandler):
         posts = model.Post.query_posts()
         self.render('front.html', posts = posts)
 
-# This class retrieve one post baesd on its post Id
+# This class is to retrieve one post baesd on its post Id
 class PostBlog(BlogHandler):
    
      def get(self, post_id):
@@ -191,7 +191,7 @@ class CreateNewPost(BlogHandler):
              error = "subject and content, please!"
              self.render("newpost.html", title=title, subject=subject, content=content, error=error)
 
-# This class update an existing post
+# This class is to update an existing post
 class EditPost(BlogHandler):
      def get(self, post_id):
          # if not login, redirect to login page
@@ -233,7 +233,7 @@ class EditPost(BlogHandler):
              error = "subject and content, please!"
              self.render("newpost.html", title=title, subject=subject, content=content, error=error)
 
-# This class delete an existing post
+# This class is to delete an existing post
 class DeletePost(BlogHandler):
      def get(self, post_id):
          # if not login, redirect to login page
@@ -266,7 +266,7 @@ class DeletePost(BlogHandler):
          message = "One blog was deleted successfully."
          self.render("result.html", message=message)
 
-# This class create a new comment
+# This class is to create a new comment
 class CreateNewComment(BlogHandler):
      
      def get(self, post_id):
@@ -298,7 +298,7 @@ class CreateNewComment(BlogHandler):
          message = "A new comment with Id %d was created successfully. " % comment.key.integer_id()
          self.render("result.html", message=message)
 
-# This class update an existing comment
+# This class is to update an existing comment
 class UpdateComment(BlogHandler):
      def get(self, comment_id='0'):
          # if not login, redirect to login page
